@@ -1,0 +1,126 @@
+name: ci_windows
+
+env:
+  CMAKE_GENERATOR: Ninja
+  CTEST_NO_TESTS_ACTION: error
+  CTEST_PARALLEL_LEVEL: 0
+
+on:
+  push:
+    paths:
+      - "**.cmake"
+      - "**/CMakeLists.txt"
+      - ".github/workflows/ci_windows.yml"
+      - "!scripts/*"
+  workflow_dispatch:
+
+# avoid wasted runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+    - uses: msys2/setup-msys2@v2
+      id: msys2
+      with:
+        update: true
+        install: >-
+          mingw-w64-ucrt-x86_64-gcc-fortran
+          mingw-w64-ucrt-x86_64-lapack
+
+    - name: Put MSYS2_MinGW64 on PATH
+      run: echo "${{ steps.msys2.outputs.msys2-location }}/ucrt64/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - &checkout
+      uses: actions/checkout@v6
+
+    - name: config
+      run: cmake --preset default -DMUMPS_parallel=false --install-prefix=${{ runner.temp }}
+      env: &lapack
+        LAPACK_ROOT: ${{ steps.msys2.outputs.msys2-location }}/ucrt64
+
+    - name: build, test
+      run: cmake --workflow default
+
+    - name: install package
+      run: cmake --install build
+
+    - name: configure example
+      run: cmake -S example -B example/build -DCMAKE_PREFIX_PATH=${{ runner.temp }}
+      env: *lapack
+
+    - name: Upload log failure
+      if: failure()
+      uses: actions/upload-artifact@v6
+      with:
+        name: example-${{ runner.os }}-CMakeConfigureLog.yaml
+        path: example/build/CMakeFiles/CMakeConfigureLog.yaml
+
+    - name: build example
+      run: cmake --build example/build
+
+    - name: test example
+      run: ctest --test-dir example/build -V
+
+
+  wsl:
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        shell: wsl-bash {0}
+
+    steps:
+
+    - uses: Vampire/setup-wsl@v6
+      with:
+        distribution: Ubuntu-24.04
+        additional-packages:
+          cmake ninja-build gcc g++ gfortran liblapack-dev libscalapack-openmpi-dev libopenmpi-dev
+        use-cache: true
+        wsl-shell-user: tester
+
+    - name: tell OS release
+      run: cat /etc/os-release
+
+    - name: tell WSL version
+      run: wsl.exe -l -v
+      shell: pwsh
+
+    - *checkout
+
+    - name: CMake configure
+      run: cmake -B /tmp/build -G Ninja --install-prefix=/tmp/mumps
+
+    - name: CMake build
+      run: cmake --build /tmp/build
+
+    - name: CTest
+      run: ctest --test-dir /tmp/build -V
+
+    - name: CMake install
+      run: cmake --install /tmp/build
+
+
+    - name: configure example
+      run: cmake -G Ninja -S example -B /tmp/build-ex -DCMAKE_PREFIX_PATH=/tmp/mumps
+
+    - name: Upload log failure
+      if: failure()
+      uses: actions/upload-artifact@v6
+      with:
+        name: example-${{ runner.os }}-CMakeConfigureLog.yaml
+        path: /tmp/build-ex/CMakeFiles/CMakeConfigureLog.yaml
+
+    - name: build example
+      run: cmake --build /tmp/build-ex
+
+    - name: test example
+      run: ctest --test-dir /tmp/build-ex -V

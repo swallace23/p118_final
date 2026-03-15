@@ -1,0 +1,40 @@
+{
+    "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+    "@type": "SoftwareSourceCode",
+    "license": "https://spdx.org/licenses/Apache-2.0",
+    "codeRepository": "https://github.com/gemini3d/gemini",
+    "contIntegration": "https://github.com/gemini3d/gemini/actions",
+    "downloadUrl": "https://github.com/gemini3d/gemini/releases",
+    "issueTracker": "https://github.com/gemini3d/gemini/issues",
+    "name": "Gemini3D",
+    "identifier": "10.5281/zenodo.3813224",
+    "description": "Ionospheric fluid electrodynamic model",
+    "applicationCategory": "Simulation",
+    "developmentStatus": "active",
+    "funder": {
+        "@type": "Organization",
+        "name": "NSF, NASA, DARPA"
+    },
+    "keywords": [
+        "ionosphere",
+        "aurora"
+    ],
+    "programmingLanguage": [
+        "Fortran",
+        "Python"
+    ],
+    "author": [
+        {
+            "@type": "Person",
+            "@id": "https://orcid.org/0000-0002-9837-059X",
+            "givenName": "Matthew",
+            "familyName": "Zettergren"
+        },
+        {
+            "@type": "Person",
+            "@id": "https://orcid.org/0000-0002-1637-6526",
+            "givenName": "Michael",
+            "familyName": "Hirsch"
+        }
+    ]
+}

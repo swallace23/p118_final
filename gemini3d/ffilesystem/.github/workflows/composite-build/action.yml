@@ -1,0 +1,44 @@
+name: "build-test-install-example"
+
+runs:
+
+  using: "composite"
+
+  steps:
+
+  - name: config cpp=${{ matrix.cpp }} shared=${{ matrix.shared }}
+    shell: bash
+    run: >-
+      cmake --preset multi
+      -Dffilesystem_cpp:BOOL=${{ matrix.cpp }}
+      -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+      -DCMAKE_CXX_STANDARD=${{ matrix.cpp-std }}
+
+  - name: Upload log failure
+    if: failure()
+    uses: actions/upload-artifact@v6
+    with:
+      name: cpp-${{ matrix.cpp-std }}-${{ matrix.cpp }}-shared-${{ matrix.shared }}-${{ runner.os }}-CMakeConfigureLog.yaml
+      path: build/CMakeFiles/CMakeConfigureLog.yaml
+
+  - name: Debug workflow
+    shell: bash
+    run: cmake --workflow debug
+
+  - name: Release workflow
+    shell: bash
+    run: cmake --workflow release
+
+  - name: install package
+    shell: bash
+    run: cmake --install build
+
+  - name: example workflow
+    shell: bash
+    run: cmake -G Ninja -S example -B example/build
+
+  - run: cmake --build example/build
+    shell: bash
+
+  - run: ctest --test-dir example/build -V
+    shell: bash

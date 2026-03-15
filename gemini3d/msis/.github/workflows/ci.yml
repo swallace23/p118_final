@@ -1,0 +1,112 @@
+name: ci
+
+env:
+  HOMEBREW_NO_INSTALL_CLEANUP: 1
+  CTEST_NO_TESTS_ACTION: error
+  CTEST_PARALLEL_LEVEL: 0
+  CMAKE_INSTALL_PREFIX: ~/libs
+  CMAKE_PREFIX_PATH: ~/libs
+  CMAKE_GENERATOR: Ninja
+
+on:
+  push:
+
+  workflow_dispatch:
+
+# avoid wasted runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+
+jobs:
+
+  core:
+    strategy:
+      matrix:
+        shared: [true, false]
+        msis2: [true, false]
+        os: [ubuntu-latest, macos-latest]
+        # future, these work
+        # libhdf5-mpi-dev
+        # hdf5-mpi
+
+    env:
+      FC: gfortran-14
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+
+    steps:
+
+    - name: Install system libs (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt update
+        sudo apt install --no-install-recommends libhdf5-dev
+
+    - name: Install system libs (macOS)
+      if: runner.os == 'macOS'
+      run: brew install hdf5
+
+    - &checkout
+      uses: actions/checkout@v6
+
+    - name: Configure MSIS msis2=${{ matrix.msis2 }} shared=${{ matrix.shared }}
+      run: >-
+        cmake --preset default
+        -Dmsis2:BOOL=${{ matrix.msis2 }}
+        -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+
+    - name: Build MSIS
+      run: cmake --build --preset default
+
+    - name: Test MSIS
+      run: ctest --preset default
+
+    - name: Install MSIS
+      run: cmake --install build
+
+    - name: Example-build & test
+      run: cmake --workflow default
+      working-directory: example
+
+
+  windows:
+    timeout-minutes: 20
+    runs-on: windows-latest
+
+    env:
+      CMAKE_INSTALL_PREFIX: libs
+      CMAKE_PREFIX_PATH: libs
+
+    strategy:
+      matrix:
+        msis2: [true, false]
+        # shared: [true, false]
+        # shared always error 135 even on only msis shared. not a problem on real pc.
+
+    steps:
+    - uses: msys2/setup-msys2@v2
+      id: msys2
+      with:
+        update: true
+        install: >-
+          mingw-w64-ucrt-x86_64-gcc-fortran
+          mingw-w64-ucrt-x86_64-hdf5
+
+    - name: Put MSYS2_MinGW64 on PATH
+      run: echo "${{ steps.msys2.outputs.msys2-location }}/ucrt64/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - *checkout
+
+    - name: Configure MSIS
+      run: cmake --preset default -Dmsis2:BOOL=${{ matrix.msis2 }}
+      env:
+        HDF5_ROOT: ${{ steps.msys2.outputs.msys2-location }}/ucrt64
+
+    - name: Build MSIS
+      run: cmake --build --preset default
+
+    - name: Test MSIS
+      run: ctest --preset default

@@ -1,0 +1,50 @@
+name: ci
+
+on:
+  push:
+    paths:
+      - "**.c"
+      - "**.cmake"
+      - "**/CMakeLists.txt"
+      - ".github/workflows/ci.yml"
+  workflow_dispatch:
+
+# avoid wasted runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CMAKE_GENERATOR: Ninja
+
+
+jobs:
+
+  unix:
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        intsize: [32, 64]
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+
+    steps:
+    - &checkout
+       uses: actions/checkout@v6
+
+    - run: cmake -B build -DIDXTYPEWIDTH=${{ matrix.intsize }}
+    - run: cmake --build build
+
+    - run: ctest --test-dir build -V
+
+
+  windows_msvc:
+    runs-on: windows-latest
+    timeout-minutes: 5
+
+    steps:
+    - *checkout
+
+    - run: cmake --workflow release

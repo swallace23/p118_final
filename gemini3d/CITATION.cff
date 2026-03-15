@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+authors:
+  - family-names: Zettergren
+    given-names: Matthew
+    orcid: 0000-0002-9837-059X
+  - family-names: Hirsch
+    given-names: Michael
+    orcid: 0000-0002-1637-6526
+title: Gemini3D
+doi: 10.5281/zenodo.3813224

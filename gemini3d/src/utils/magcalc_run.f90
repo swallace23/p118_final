@@ -1,0 +1,49 @@
+program magcalc_run
+!! for use from terminal/CMake, computes optimal MPI count
+!! for a particular simulation
+
+use exe_frontend, only : cli_parser, get_Ncpu
+use reader, only: get_simsize3
+use autogrid, only : grid_auto, max_mpi
+
+implicit none (type, external)
+
+integer :: i, lx1, lx2all, lx3all, lid, lid2, lid3, Ncpu
+character(:), allocatable :: path, exe, cmd, mpiexec, extra
+logical :: plan
+character(1000) :: buf
+
+call cli_parser(plan, path, exe, mpiexec, extra)
+
+Ncpu = get_Ncpu()
+
+if (Ncpu <= 1) error stop 'Ncpu must be > 1. use mpiexec with magcalc.bin'
+
+!> setup run
+call get_simsize3(path // '/inputs/simsize.h5', lx1, lx2all, lx3all)
+
+lid = max_mpi(lx2all, lx3all, Ncpu)
+
+!> checks consistency
+call grid_auto(lx2all, lx3all, lid, lid2, lid3)
+
+print '(A,I0,A1,I0,A,I0,A1,I0)', 'MPI partition of lx2, lx3: ', lx2all, ' ',lx3all, &
+' is lid2, lid3: ',lid2,' ',lid3
+print '(A,I0)', 'MPI images: ', lid
+
+if(plan) stop 'magcalc.run: plan complete'
+
+!> run magcalc.bin
+if(lid > 1) then
+  write(buf, '(A1,A,A,I0,1X,A,1X,A,1X,A)') '"',mpiexec, '" -n ', lid, exe, path, extra
+else
+  write(buf, '(A,1X,A,1X,A)') exe, path, extra
+endif
+!! quotes are for mpiexec path with spaces
+cmd = trim(buf)
+print *, cmd
+call execute_command_line(cmd, exitstat=i)
+
+if (i/=0) error stop 'magcalc.bin run failure'
+
+end program

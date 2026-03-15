@@ -1,0 +1,52 @@
+include(ExternalProject)
+include(GNUInstallDirs)
+
+if(MUMPS_find_SCALAPACK AND NOT TARGET SCALAPACK::SCALAPACK)
+
+# Make SCALAPACK_VENDOR match LAPACK_VENDOR
+
+if(NOT DEFINED SCALAPACK_VENDOR)
+  if(LAPACK_VENDOR MATCHES "^MKL")
+    set(SCALAPACK_VENDOR MKL)
+  elseif(NOT DEFINED LAPACK_VENDOR AND
+    (DEFINED ENV{MKLROOT} AND IS_DIRECTORY "$ENV{MKLROOT}"))
+    set(SCALAPACK_VENDOR MKL)
+    set(LAPACK_VENDOR MKL)
+  endif()
+
+  if(LAPACK_VENDOR STREQUAL "AOCL")
+    set(SCALAPACK_VENDOR AOCL)
+  endif()
+endif()
+
+if(MKL IN_LIST SCALAPACK_VENDOR)
+  if(MUMPS_openmp)
+    list(APPEND SCALAPACK_VENDOR OpenMP)
+  endif()
+endif()
+
+if(MKL IN_LIST SCALAPACK_VENDOR AND NOT MKL64 IN_LIST SCALAPACK_VENDOR)
+  if(MUMPS_intsize64)
+    list(APPEND SCALAPACK_VENDOR MKL64)
+  endif()
+endif()
+
+if(MUMPS_find_static)
+  list(APPEND SCALAPACK_VENDOR STATIC)
+endif()
+
+find_package(SCALAPACK COMPONENTS ${SCALAPACK_VENDOR})
+
+endif()
+
+if(SCALAPACK_FOUND OR TARGET SCALAPACK::SCALAPACK)
+  return()
+elseif(DEFINED SCALAPACK_VENDOR)
+  message(FATAL_ERROR "Scalapack from ${SCALAPACK_VENDOR} not found.")
+endif()
+
+# build scalapack
+set(SCALAPACK_BUILD_TESTING off)
+
+git_submodule(${PROJECT_SOURCE_DIR}/scalapack)
+add_subdirectory(${PROJECT_SOURCE_DIR}/scalapack)

@@ -1,0 +1,18 @@
+[tool.black]
+line-length = 100
+force-exclude = '''
+^/(
+msis
+| h5fortran
+| hwm14
+| ffilesystem
+| glow
+)/'''
+
+[tool.mypy]
+files = ["."]
+
+ignore_missing_imports = true
+strict_optional = false
+allow_redefinition = true
+exclude = ["msis/", "h5fortran/", "hwm14/", "ffilesystem/", "glow/"]

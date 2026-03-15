@@ -1,0 +1,165 @@
+name: ci_windows
+
+env:
+  CMAKE_BUILD_PARALLEL_LEVEL: 4
+  CMAKE_INSTALL_PREFIX: libs
+  CMAKE_PREFIX_PATH: libs
+
+on:
+  push:
+    paths:
+      - "**.c"
+      - "**.h"
+      - "**.cpp"
+      - "**.f90"
+      - "**.F90"
+      - "**/CMakeLists.txt"
+      - "**.cmake"
+      - ".github/workflows/ci_windows.yml"
+      - "!memcheck.cmake"
+  workflow_dispatch:
+
+jobs:
+
+  msvc:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        cpp: [false, true]
+
+    # github actions generally broken for shared lib, even when exe in cwd
+
+    env:
+      CMAKE_GENERATOR: "Visual Studio 18 2026"
+
+    steps:
+    - &checkout
+      uses: actions/checkout@v6
+
+    - name: Configure
+      run: >-
+        cmake -B build
+        -Dffilesystem_BUILD_TESTING=on
+        -Dffilesystem_cpp:BOOL=${{ matrix.cpp }}
+        -Dffilesystem_fortran:BOOL=no
+        --log-level=VERBOSE
+
+    - name: build Release
+      run: cmake --build build --config Release
+
+    - name: test Release
+      run: ctest --test-dir build -C Release -V
+
+    - name: Install Release
+      run: cmake --install build --config Release
+
+    - name: example configure
+      run: cmake -S example -B example/build
+
+    - name: example build
+      run: cmake --build example/build --config Release
+
+    - name: example test
+      run: ctest --test-dir example/build -C Release -V
+
+  msys2:
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: false
+      matrix:
+        cpp: [false, true]
+        compiler: [ { ccname: "gcc", cc: "gcc", cxx: "g++", fcname: "gcc-fortran", fc: "gfortran" },]
+                 #   { ccname: "clang", cc: "clang", cxx: "clang++", fcname: "flang", fc: "flang" } ]
+
+      # github actions generally broken for shared lib, even when exe in cwd
+    env:
+      CC: ${{ matrix.compiler.cc }}
+      CXX: ${{ matrix.compiler.cxx }}
+      FC: ${{ matrix.compiler.fc }}
+      CMAKE_GENERATOR: Ninja
+
+    steps:
+    - uses: msys2/setup-msys2@v2
+      id: msys2
+      with:
+        update: true
+        install: >-
+          mingw-w64-ucrt-x86_64-${{ matrix.compiler.ccname }}
+          mingw-w64-ucrt-x86_64-${{ matrix.compiler.fcname }}
+
+    - name: Put MSYS2_MinGW64 on PATH
+      run: echo "${{ steps.msys2.outputs.msys2-location }}/ucrt64/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - *checkout
+
+    - name: config cpp=${{ matrix.cpp }}
+      run: >-
+        cmake --preset multi
+        -Dffilesystem_cpp:BOOL=${{ matrix.cpp }}
+
+    - name: Upload log failure
+      if: failure()
+      uses: actions/upload-artifact@v6
+      with:
+        name: cpp-${{ matrix.cpp }}-shared-${{ runner.os }}-CMakeConfigureLog.yaml
+        path: build/CMakeFiles/CMakeConfigureLog.yaml
+
+    - name: Debug workflow
+      run: cmake --workflow debug
+
+    - name: Release workflow
+      run: cmake --workflow release
+
+    - name: install package
+      run: cmake --install build
+
+    - name: example workflow
+      run: cmake -S example -B example/build
+
+    - run: cmake --build example/build
+
+    - run: ctest --test-dir example/build -V
+
+
+  wsl:
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        shell: wsl-bash {0}
+
+    steps:
+
+    - uses: Vampire/setup-wsl@v6
+      with:
+        distribution: Ubuntu-24.04
+        additional-packages:
+          cmake ninja-build gcc g++ gfortran
+        use-cache: true
+        wsl-shell-user: tester
+
+    - name: tell OS release
+      run: cat /etc/os-release
+
+    - name: tell WSL version
+      run: wsl.exe -l -v
+      shell: pwsh
+
+    - *checkout
+
+    - run: >-
+        cmake -B /tmp/build -G Ninja
+        -Dffilesystem_BUILD_TESTING=on
+        -Dffilesystem_cpp:BOOL=${{ matrix.cpp }}
+        -Dffilesystem_fortran:BOOL=no
+        --log-level=VERBOSE
+
+    - run: cmake --build /tmp/build
+
+    - run: ctest --test-dir /tmp/build -V

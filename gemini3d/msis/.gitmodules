@@ -1,0 +1,4 @@
+[submodule "h5fortran"]
+	path = h5fortran
+	url = https://github.com/eclairwaves/h5fortran
+	shallow = true

@@ -1,0 +1,15 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
+
+set(msis_datadir @CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_BINDIR@)
+
+set(msis_MSIS2_FOUND @msis2@)
+
+find_dependency(h5fortran CONFIG)
+
+include(${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@-targets.cmake)
+
+check_required_components(@PROJECT_NAME@)

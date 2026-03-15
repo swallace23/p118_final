@@ -1,0 +1,7 @@
+scalapack-2.2.2/
+lapack-3.12.1/
+pygemini/
+gemini-examples/
+mat_gemini/
+mat_gemini-scripts/
+.venv/

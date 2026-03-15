@@ -1,0 +1,136 @@
+name: ci
+
+env:
+  HOMEBREW_NO_INSTALL_CLEANUP: 1
+  CTEST_NO_TESTS_ACTION: error
+  CTEST_PARALLEL_LEVEL: 0
+  CMAKE_INSTALL_PREFIX: ~/local
+  CMAKE_PREFIX_PATH: ~/local
+  CMAKE_GENERATOR: Ninja
+
+on:
+  push:
+    paths:
+      - "**.c"
+      - "**.f"
+      - "**.F"
+      - "**.f90"
+      - "**.F90"
+      - "**.cmake"
+      - "**.cmake.in"
+      - "**.txt"
+      - "cmake/libraries.json"
+      - ".github/workflows/ci.yml"
+      - "!scripts/*"
+
+  workflow_dispatch:
+
+# avoid wasted runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  core:
+    timeout-minutes: 15
+
+    strategy:
+      matrix:
+        scotch: [true,false]
+        metis: [false]
+        parmetis: [false]
+        parallel: [true]
+        openmp: [false]
+        mpich: [false]
+        lapack_vendor: [""]
+        os: [ubuntu-latest, macos-latest]
+        include:
+          - metis: true
+            parallel: false
+            os: ubuntu-latest
+            name: METIS
+          - parmetis: true
+            parallel: true
+            os: ubuntu-latest
+            name: ParMETIS
+          - lapack_vendor: "OpenBLAS"
+            parallel: true
+            os: ubuntu-latest
+            name: OpenBLAS
+          - parallel: false
+            os: ubuntu-latest
+          - openmp: true
+            parallel: false
+            os: ubuntu-latest
+            name: OpenMP
+          - mpich: true
+            parallel: true
+            os: ubuntu-latest
+            name: MPICH
+
+    name: ${{ matrix.os }}-parallel=${{ matrix.parallel }}-${{ matrix.name }}-scotch-${{ matrix.scotch }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+
+    - &checkout
+      uses: actions/checkout@v6
+
+    - &prereqs
+      name: install prereqs
+      uses: ./.github/workflows/composite-deps
+
+    - name: set Fortran compiler FC (macOS)
+      if: runner.os == 'macOS'
+      run: echo "FC=gfortran-15" >> $GITHUB_ENV
+
+    - name: build and install
+      uses: ./.github/workflows/composite-build
+
+    - name: build example
+      uses: ./.github/workflows/composite-example
+
+
+  cmake-older:
+    timeout-minutes: 30
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        cmake_version: ["3.20.6"]
+
+    steps:
+    - *checkout
+    - *prereqs
+
+    - uses: ./.github/workflows/composite-cmake
+
+    - name: configure
+      run: $CMAKE -Bbuild -DCMAKE_INSTALL_PREFIX:PATH=$(pwd)/build/local
+
+    - name: build
+      run: $CMAKE --build build
+
+    - name: test
+      run: $CTEST --test-dir build
+
+    - name: install package
+      run: $CMAKE --install build
+
+
+# test this project used as an archive in other projects
+  archive:
+    timeout-minutes: 15
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - *checkout
+    - *prereqs
+
+    - name: Test Project as archive
+      run: cmake -S example/other_project -B build
+
+# if broken, the CMake configure step fails

@@ -1,0 +1,132 @@
+# MUMPS sparse solver
+
+[![ci](https://github.com/scivision/mumps-superbuild/actions/workflows/ci.yml/badge.svg)](https://github.com/scivision/mumps-superbuild/actions/workflows/ci.yml)
+[![ci_windows](https://github.com/scivision/mumps-superbuild/actions/workflows/ci_windows.yml/badge.svg)](https://github.com/scivision/mumps-superbuild/actions/workflows/ci_windows.yml)
+[![ci_build](https://github.com/scivision/mumps-superbuild/actions/workflows/ci_build.yml/badge.svg)](https://github.com/scivision/mumps-superbuild/actions/workflows/ci_build.yml)
+[![oneapi-linux](https://github.com/scivision/mumps-superbuild/actions/workflows/oneapi-linux.yml/badge.svg)](https://github.com/scivision/mumps-superbuild/actions/workflows/oneapi-linux.yml)
+
+This repository provides a CMake superbuild project for MUMPS and optional MUMPS dependencies including ScaLAPACK, ParMETIS, Scotch, etc.
+This CMake superbuild downloads the unmodified source tarfile from mumps-solver.org and builds.
+For offline usage, the user can specify a local MUMPS source archive like `cmake -Bbuild -DMUMPS_url=/path/to/mumps.zip`
+If mumps-solver.org is unavailable, try [mumps_archive](https://github.com/gsylvand/mumps_archive/) which has the same source tarfiles.
+
+CMake builds MUMPS quickly and more conveniently than the original Makefiles.
+CMake allows easy reuse of MUMPS in external projects via any of:
+
+* CMake [FetchContent](https://gist.github.com/scivision/2ad002ed26589783f1522160da4d27d1)
+* build MUMPS, `cmake --install`, then [find_package(MUMPS CONFIG REQUIRED)](https://gist.github.com/scivision/1ea2d19011c165b39b15ccb95d54f451)
+* CMake ExternalProject_Add (similar to FetchContent example)
+
+[MUMPS CeCILL-C license](https://mumps-solver.org/index.php?page=dwnld#license)
+is distinct from this CMake superbuild license.
+The MUMPS Team typically make new
+[releases](https://mumps-solver.org/index.php?page=dwnld#cl)
+each year.
+
+Many compilers and systems are supported by CMake build system on Windows, MacOS and Linux.
+Static (default) or Shared `cmake -DBUILD_SHARED_LIBS=on` MUMPS builds are supported.
+
+Virtually all contemporary compilers work, including GCC, Clang/Flang, oneAPI, NVHPC, AOCC, Cray, etc.
+
+By default PORD ordering is used.
+[Scotch, METIS, and parMETIS ordering](./Readme_ordering.md)
+can be used and will be automatically built if needed.
+
+Several [LAPACK vendors](./Readme_LAPACK.md) are supported.
+
+The MUMPS discrete solver project is distinct from this CMake superbuild.
+See the
+[MUMPS Users email list](https://listes.ens-lyon.fr/sympa/subscribe/mumps-users)
+and
+[MUMPS User Guide](https://mumps-solver.org/index.php?page=doc)
+for any questions about MUMPS itself.
+
+## Build
+
+From this repo's top directory:
+
+```sh
+cmake -B build
+cmake --build build
+```
+
+Numerous MUMPS [build options are available](./Readme_options.md).
+
+The default precision is float64 and float32.
+To build all precisions including complex64, complex128 do:
+
+```sh
+cmake -Bbuild -DBUILD_SINGLE=on -DBUILD_DOUBLE=on -DBUILD_COMPLEX=on -DBUILD_COMPLEX16=on
+
+cmake --build build
+```
+
+The headers and library are optionally installed to an install prefix:
+
+```sh
+cmake -Bbuild --install-prefix /path/to/install/mumps
+
+cmake --install build
+```
+
+With the default options the build/ directory contains library binaries ([Windows](./Readme_Windows.md) binaries have different names):
+
+* libdmumps.a (real64)
+* libsmumps.a (real32)
+* libmumps_common.a (common MUMPS routines)
+* libpord.a  (PORD library)
+
+If `-DMUMPS_parallel=no` was set, additional helper libraries are built in place of linking MPI libraries:
+
+* libmpiseq_fortran.a
+* libmpiseq_c.a
+
+The libmpiseq.a file isn't used directly by this project, but it for compatibility with other build systems that may expect a libmpiseq file.
+
+These libraries can be linked into C, C++, Fortran, etc. programs, or even be used with appropriate interfaces from [Matlab](./Readme_matlab.md) and Python
+[PyMUMPS](https://pypi.org/project/PyMUMPS/)
+and
+[python-mumps](https://pypi.org/project/python-mumps/).
+
+To see the CMake target dependency graph do:
+
+```sh
+cmake -B build
+
+cmake --build build -t graphviz
+```
+
+and view the SVG file build/graphviz/MUMPS.svg via a web browser or SVG viewer.
+
+## Self test and examples
+
+Optionally, run self-tests:
+
+```sh
+ctest --test-dir build
+```
+
+To build the example, first "install" the MUMPS package-the default install location is under the MUMPS build/local directory:
+
+```sh
+cmake --install build
+
+cmake -S example -B example/build -DMUMPS_ROOT=build/local
+
+cmake --build example/build
+```
+
+## Using binary libraries
+
+Linking the MUMPS binaries into a user-program is project-dependent.
+An example using the examples in this project with GNU GCC, using the "mpicxx" MPI compiler wrapper:
+
+```sh
+mpicxx ./example/d_example.cpp -I./build/local/include -L./build/local/lib -ldmumps -lmumps_common -lpord -lscalapack -lblacs -llapack -lblas -lgfortran
+```
+
+If `-DMUMPS_parallel=no` was used to build MUMPS, instead do:
+
+```sh
+g++ ./example/d_example.cpp -I./build/local/include -L./build/local/lib -ldmumps -lmumps_common -lpord -llapack -lblas -lmpiseq_fortran -lmpiseq_c -lgfortran
+```

@@ -1,0 +1,94 @@
+name: ci
+
+env:
+  HOMEBREW_NO_INSTALL_CLEANUP: 1
+  CTEST_NO_TESTS_ACTION: error
+  CTEST_PARALLEL_LEVEL: 0
+  CMAKE_INSTALL_PREFIX: ~/libs
+  CMAKE_PREFIX_PATH: ~/libs
+  CMAKE_GENERATOR: Ninja
+
+on:
+  push:
+    paths:
+      - "**.f90"
+      - "**.F90"
+      - "**.cmake"
+      - "**/CMakeLists.txt"
+      - ".github/workflows/ci.yml"
+      - "!scripts/**"
+  workflow_dispatch:
+
+# avoid wasted runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+
+jobs:
+
+  core:
+    strategy:
+      matrix:
+        shared: [false]
+        os: [ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            shared: true
+
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+
+    steps:
+
+    - &linux-prereq
+      name: install prereqs (Linux)
+      timeout-minutes: 15
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt update
+        sudo apt install --no-install-recommends libopenmpi-dev openmpi-bin liblapack-dev
+
+    - name: install prereqs (macOS)
+      timeout-minutes: 15
+      if: runner.os == 'macOS'
+      run: |
+        brew install open-mpi
+        echo "FC=gfortran-15" >> $GITHUB_ENV
+
+    - &checkout
+      uses: actions/checkout@v6
+
+    - name: Config
+      run: cmake -B build -DBUILD_SINGLE:BOOL=off -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+
+    - name: build / test
+      run: cmake --workflow default
+
+    - name: install
+      run: cmake --install build
+
+    - name: example Config
+      run: cmake -S example -B example/build -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+
+    - name: build
+      run: cmake --build example/build
+
+    - name: test
+      run: ctest --test-dir example/build -V
+
+# test this project used as an archive in other projects
+  archive:
+    timeout-minutes: 15
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - *linux-prereq
+    - *checkout
+
+    - name: Test Scalapack as archive
+      run: cmake -S example/other_project -B build
+
+# if broken, the CMake configure step fails

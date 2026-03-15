@@ -1,0 +1,17 @@
+{
+  "matlab": {
+    "arch": "glnxa64",
+    "version": "24.2.0.2863752 (R2024b) Update 5"
+  },
+  "git": {
+    "version": "shell-init: error retrieving current directory: getcwd: cannot access parent directories: No such file or directory
+git version 2.43.0",
+    "remote": "shell-init: error retrieving current directory: getcwd: cannot access parent directories: No such file or directory
+https://github.com/gemini3d/mat_gemini",
+    "branch": "shell-init: error retrieving current directory: getcwd: cannot access parent directories: No such file or directory
+main",
+    "commit": "shell-init: error retrieving current directory: getcwd: cannot access parent directories: No such file or directory
+v5.6.0-154-gcc878fc",
+    "porcelain": "false"
+  }
+}

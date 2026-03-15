@@ -1,0 +1,13 @@
+{
+  "matlab": {
+    "arch": "glnxa64",
+    "version": "24.2.0.2863752 (R2024b) Update 5"
+  },
+  "git": {
+    "version": "git version 2.43.0",
+    "remote": "https://github.com/gemini3d/mat_gemini",
+    "branch": "main",
+    "commit": "v5.6.0-154-gcc878fc",
+    "porcelain": "true"
+  }
+}
