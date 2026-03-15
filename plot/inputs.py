@@ -62,10 +62,28 @@ def plot_all(
             parm=dat[k][-1, :, :, :].squeeze(),
             name=cmap_name[k],
             wavelength=dat.get("wavelength"),
-        )
+       )
+        for ax in fg.axes:                       # each subplot that plotfun created
+            # ----- 2‑D data (image plane) ---------------------------------
+            # The plotting functions always use the *first two* coordinate
+            # dimensions that exist in the grid dictionary.  We therefore try
+            # the most common pairs in order of preference.
+            if "mlon" in xg and "mlat" in xg:           # magnetic lon / lat
+                ax.set_xlim(xg["mlon"].min(), xg["mlon"].max())
+                ax.set_ylim(xg["mlat"].min(), xg["mlat"].max())
+            elif "glon" in xg and "glat" in xg:         # geographic lon / lat
+                ax.set_xlim(xg["glon"].min(), xg["glon"].max())
+                ax.set_ylim(xg["glat"].min(), xg["glat"].max())
+            elif "x1" in xg and "glat" in xg:           # altitude / geographic lat
+                # altitude is stored in metres – convert to km for nicer tick labels
+                ax.set_xlim(xg["x1"].min() / 1e3, xg["x1"].max() / 1e3)
+                ax.set_ylim(xg["glat"].min(), xg["glat"].max())
+            elif "x1" in xg and "mlat" in xg:           # altitude / magnetic lat
+                ax.set_xlim(xg["x1"].min() / 1e3, xg["x1"].max() / 1e3)
+                ax.set_ylim(xg["mlat"].min(), xg["mlat"].max())
+
         save_fig(fg, direc, name=k, fmt=saveplot_fmt, time=time)
-
-
+        
 def Efield(direc: Path) -> None:
     """plot input E-field
 
