@@ -21,7 +21,7 @@ use advec, only: interface_vels_allspec,sweep3_allspec,sweep1_allspec,sweep2_all
 use calculus, only: etd_uncoupled, div3d
 use collisions, only:  thermal_conduct, thermal_conduct_new
 use phys_consts, only : wp,pi,qs,lsp,gammas,kB,ms,mindensdiv,mindens,mindensnull, debug
-use diffusion, only:  trbdf23d, diffusion_prep, backEuler3D
+use diffusion, only:  trbdf23d, diffusion_prep, backEuler3D, SDIRK23D
 use grid, only: lx1, lx2, lx3, gridflag
 use meshobj, only: curvmesh
 use ionization, only: ionrate_glow98, ionrate_fang, eheating, photoionization
@@ -418,6 +418,8 @@ subroutine energy_diffusion(dt,x,ns,Ts,J1,nn,Tn,flagdiffsolve,Teinf)
         param=backEuler3D(param,A,B,C,D,E,dt,x)    !1st order method, only use if you are seeing grid-level oscillations in temperatures
       case (2)
         param=TRBDF23D(param,A,B,C,D,E,dt,x)       !2nd order method, should be used for most simulations
+      case (3)
+        param=SDIRK23D(param,A,B,C,D,E,dt,x)
       case default
         print*, 'Unsupported diffusion solver type/mode:  ',flagdiffsolve,'.  Should be either 1 or 2.'
         error stop

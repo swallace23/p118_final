@@ -6,11 +6,11 @@ use phys_consts, only: kB,lsp,gammas,mindensdiv, wp
 !! sizes are not imported in case we want to do subgrid diffusion
 use meshobj, only : curvmesh
 use grid, only : gridflag
-use PDEparabolic, only : backEuler1D,TRBDF21D
+use PDEparabolic, only : backEuler1D,TRBDF21D,SDIRK21D
 
 implicit none (type, external)
 private
-public :: diffusion_prep, TRBDF23D, backEuler3D
+public :: diffusion_prep, TRBDF23D, backEuler3D, SDIRK23D
 
 interface TRBDF23D
   module procedure TRBDF23D_curv
@@ -19,6 +19,10 @@ end interface TRBDF23D
 interface backEuler3D
   module procedure backEuler3D_curv
 end interface backEuler3D
+
+interface SDIRK23D
+  module procedure SDIRK23D_curv
+end interface SDIRK23D
 
 integer, dimension(2), protected :: BCtype=[0,0]
 
@@ -193,4 +197,32 @@ contains
       end do
     end do
   end function TRBDF23D_curv
+
+  function SDIRK23D_curv(f,A,B,C,D,E,dt,x)
+  use PDEparabolic, only : SDIRK21D        ! <‑‑ bring the 1‑D solver into scope
+  real(wp), dimension(:,:,:), intent(in)    :: A,B,C,D,E   ! trimmed to grid size
+  real(wp), dimension(-1:,-1:,-1:), intent(in) :: f          ! includes ghosts
+  real(wp), intent(in)                      :: dt
+  class(curvmesh), intent(in)               :: x
+  integer                                   :: ix2,ix3,lx1,lx2,lx3
+  real(wp), dimension(size(f,1)-4)          :: fx1slice
+  real(wp), dimension(-1:size(f,1)-2, &
+                     -1:size(f,2)-2, &
+                     -1:size(f,3)-2)      :: SDIRK23D_curv
+
+  lx1 = size(f,1)-4
+  lx2 = size(f,2)-4
+  lx3 = size(f,3)-4
+
+  do ix3 = 1, lx3
+     do ix2 = 1, lx2
+        fx1slice = f(1:lx1,ix2,ix3)
+        fx1slice = SDIRK21D( fx1slice, A(:,ix2,ix3), B(:,ix2,ix3), &
+                             C(:,ix2,ix3), D(:,ix2,ix3), E(:,ix2,ix3), &
+                             f(0,ix2,ix3), f(lx1+1,ix2,ix3), &
+                             dt, BCtype, x%dx1, x%dx1i )
+        SDIRK23D_curv(1:lx1,ix2,ix3) = fx1slice
+     end do
+  end do
+end function SDIRK23D_curv
 end module diffusion
