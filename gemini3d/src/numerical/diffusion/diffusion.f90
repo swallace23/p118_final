@@ -224,5 +224,11 @@ contains
         SDIRK23D_curv(1:lx1,ix2,ix3) = fx1slice
      end do
   end do
+  do ix3 = 1, lx3
+     do ix2 = 1, lx2
+        SDIRK23D_curv(0,ix2,ix3) = f(0,ix2,ix3)
+        SDIRK23D_curv(lx1+1,ix2,ix3) = f(lx1+1,ix2,ix3)
+     end do
+  end do
 end function SDIRK23D_curv
 end module diffusion

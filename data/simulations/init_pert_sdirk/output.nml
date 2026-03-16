@@ -1,0 +1,29 @@
+&FILES
+ INPUT_NML="./inputs/config.nml",
+ OUTPUT_DIR=".",
+ REALBITS=64         ,
+ /
+&GIT
+ GIT_VERSION="2.43.0",
+ BRANCH="master",
+ REV=" 1.7.0",
+ PORCELAIN="dirty",
+ /
+&SYSTEM
+ COMPILER="GCC version 13.3.0",
+ COMPILER_FLAGS="-I /usr/lib/x86_64-linux-gnu/mpich/include -I /home/sean-wallace/Documents/p118_final/gemini3d/sdirk/h5fortran/include -I /home/sean-wallace/Documents/p118_final/gemini3d/sdirk/ffilesystem/include -I /home/sean-wallace/Documents/p118_final/gemini3d/ffilesystem/include -I /home/sean-wallace/Documents/p118_final/gemini3d/sdirk/local/include -I /home/sean-wallace/Documents/p118_final/gemini3d/sdirk/local/include/mod/static -I /usr/include -mtune=generic -march=x86-64 -O3 -O3 -Wno-uninitialized -Wno-do-subscript -fimplicit-none -fno-backtrace -J ../../include -fpre-include=/usr/include/finclude/x86_64-linux-gnu/math-vector-fortran.h",
+ EXE="/home/sean-wallace/Documents/p118_final/gemini3d/sdirk/gemini.bin",
+ /
+&GRID
+ LID=1          ,
+ LID2=1          ,
+ LID3=1          ,
+ LX1=15         ,
+ LX2=12         ,
+ LX3=1          ,
+ LX2ALL=12         ,
+ LX3ALL=1          ,
+ /
+&MILESTONE
+ MCADENCE=-1         ,
+ /

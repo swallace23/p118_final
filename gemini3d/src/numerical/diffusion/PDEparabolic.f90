@@ -433,6 +433,9 @@ function SDIRK21D(Ts,A,B,C,D,E,Tsminx1,Tsmaxx1,dt,BCtype,dx1,dx1i) result(Tnew)
   !  -> (I/dtg - J)Y1 = Ts/dtg + E
   !-----------------------------------------
   rhs(:) = Ts(:)/dtg + E(:)
+  ! enforce BC rows
+  rhs(1) = Tsminx1
+  rhs(lx1) = Tsmaxx1
   call gbsv(M, rhs, kl=2)
   Y1(:) = rhs(:)
 
@@ -446,6 +449,8 @@ function SDIRK21D(Ts,A,B,C,D,E,Tsminx1,Tsmaxx1,dt,BCtype,dx1,dx1i) result(Tnew)
   !-----------------------------------------
   denom = dtg
   rhs(:) = Ts(:)/denom + (dt/denom)*(1._wp - 2._wp*g)*F1(:) + E(:)
+  rhs(1) = Tsminx1
+  rhs(lx1) = Tsmaxx1
 
   ! Need the same LHS matrix; reassemble because gbsv overwrites M
   call assemble_Ioverdt_minus_J(M, A,B,C,Dh, dtg, BCtype, dx1, dx1i, Tsminx1, Tsmaxx1)

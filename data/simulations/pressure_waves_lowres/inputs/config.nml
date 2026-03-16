@@ -3,10 +3,10 @@
 &base
 ymd = 2013,2,19               ! year, month, day
 UTsec0 = 18000.0              ! start time in UT seconds
-tdur = 7200                ! duration of simulation in seconds
-dtout = 60.0                ! how often to do output
+tdur = 86400.0                ! duration of simulation in seconds
+dtout = 1800.0                ! how often to do output
 activ = 109.5, 109.9, 5       ! f107a,f107,Ap
-tcfl = 0.9                    ! target cfl number
+tcfl = 0.5                    ! target cfl number
 Teinf = 1500.0                ! exospheric electron temperature
 /
 
@@ -45,10 +45,10 @@ flagdneu=1
 interptype=0
 sourcemlat = 67.60e0
 sourcemlon = 98.21e0
-dtneu = 6e0
+dtneu = 60e0
 drhon = 2e3
 dzn = 2e3
-source_dir="~/Documents/p118_final/data/inits/pressure_waves_lowres/neutrals"
+source_dir="~/Documents/p118_final/data/simulations/pressure_waves_lowres/inputs/neutrals"
 /
 
 
